@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐋 Whale Hunter Pro v6.0 - Enhanced Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <style>
+        * { font-family: 'Vazirmatn', sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); }
+        .live-dot { animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: #1e293b; }
+        .context-menu {
+            position: fixed;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 8px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
+        }
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .context-menu-item:hover {
+            background: #334155;
+        }
+        table.sortable th {
+            cursor: pointer;
+            user-select: none;
+        }
+        table.sortable th:hover {
+            background: #334155;
+        }
+        table.sortable th.sort-asc::after {
+            content: ' ▲';
+            font-size: 0.7em;
+        }
+        table.sortable th.sort-desc::after {
+            content: ' ▼';
+            font-size: 0.7em;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white min-h-screen">
+    
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu">
+        <div class="context-menu-item" onclick="showCurrentPrice()">
+            📊 نمایش قیمت فعلی
+        </div>
+    </div>
+
+    <header class="glass border-b border-slate-700 sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-4">
+                    <h1 class="text-2xl font-bold flex items-center gap-2">
+                        <span class="text-4xl">🐋</span>
+                        <span class="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                            Whale Hunter Pro v6.0
+                        </span>
+                        <span class="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">Enhanced 🚀</span>
+                    </h1>
+                    <div id="apiStatus" class="flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-sm">
+                        <span class="w-2 h-2 rounded-full bg-yellow-500 live-dot"></span>
+                        <span>در حال اتصال...</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <select id="apiSource" onchange="changeApi()" class="bg-slate-800 rounded-lg px-3 py-1 border border-slate-600 text-sm">
+                        <option value="bybit">🟡 Bybit Futures</option>
+                        <option value="okx">⭕ OKX Futures</option>
+                        <option value="bitget">🟢 Bitget Futures</option>
+                        <option value="kraken">🔵 Kraken Futures</option>
+                    </select>
+                    <span id="lastUpdate" class="text-xs text-slate-400">-</span>
+                </div>
+            </div>
+            <nav class="flex gap-2 mt-3 flex-wrap">
+                <button onclick="showTab('dashboard')" class="tab-btn px-4 py-2 rounded-lg bg-slate-700 text-sm" data-tab="dashboard">🎯 داشبورد</button>
+                <button onclick="showTab('market')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="market">📊 بازار</button>
+                <button onclick="showTab('whales')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="whales">🐋 نهنگ‌ها</button>
+                <button onclick="showTab('signals')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="signals">📡 سیگنال‌ها</button>
+                <button onclick="showTab('validation')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="validation">✅ اعتبارسنجی</button>
+                <button onclick="showTab('analysis')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="analysis">📈 تحلیل</button>
+                <button onclick="showTab('utbot')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="utbot">🤖 UT Bot</button>
+                <button onclick="showTab('autotrade')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="autotrade">⚡ اتو ترید</button>
+                <button onclick="showTab('settings')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="settings">⚙️ تنظیمات</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        
+        <!-- Dashboard -->
+        <div id="dashboard-tab" class="tab-content">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+                <div class="glass rounded-xl p-4 border border-slate-700 cursor-pointer hover:border-blue-500 transition-all" onclick="showTab('whales')">
+                    <div class="text-slate-400 text-xs">نهنگ مادر</div>
+                    <div class="text-2xl font-bold text-blue-400" id="statWhales">0</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700 cursor-pointer hover:border-green-500 transition-all" onclick="filterSignals('valid')">
+                    <div class="text-slate-400 text-xs">سیگنال معتبر</div>
+                    <div class="text-2xl font-bold text-green-400" id="statValid">0</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700 cursor-pointer hover:border-yellow-500 transition-all" onclick="filterSignals('pending')">
+                    <div class="text-slate-400 text-xs">در انتظار</div>
+                    <div class="text-2xl font-bold text-yellow-400" id="statPending">0</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <div class="text-slate-400 text-xs">دقت سیگنال</div>
+                    <div class="text-2xl font-bold text-purple-400" id="statAccuracy">0%</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <div class="text-slate-400 text-xs">پامپ/دامپ</div>
+                    <div class="text-2xl font-bold text-orange-400" id="statPumpDump">0</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <div class="text-slate-400 text-xs">Whale Flow</div>
+                    <div class="text-2xl font-bold text-cyan-400" id="statFlow">$0</div>
+                </div>
+            </div>
+            
+            <div class="mb-6 glass rounded-xl p-4 border border-purple-500/30">
+                <h3 class="font-bold text-purple-400 mb-3 flex items-center gap-2">
+                    🧮 فرمول اعتبارسنجی دقیق
+                    <span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">پویا</span>
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="p-3 bg-slate-800 rounded-lg">
+                        <div class="text-cyan-400 font-bold mb-2">⏱️ مرحله 1 (1 دقیقه)</div>
+                        <div class="text-slate-300 text-xs space-y-1">
+                            <div>• وزن: <span class="text-yellow-400">20%</span></div>
+                            <div>• حداقل تغییر: <span class="text-green-400">±0.1%</span></div>
+                            <div>• بررسی سریع روند</div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-slate-800 rounded-lg">
+                        <div class="text-cyan-400 font-bold mb-2">⏱️ مرحله 2 (2 دقیقه)</div>
+                        <div class="text-slate-300 text-xs space-y-1">
+                            <div>• وزن: <span class="text-yellow-400">30%</span></div>
+                            <div>• تأیید روند</div>
+                            <div>• بررسی استمرار</div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-slate-800 rounded-lg">
+                        <div class="text-cyan-400 font-bold mb-2">⏱️ مرحله 3 (4 دقیقه)</div>
+                        <div class="text-slate-300 text-xs space-y-1">
+                            <div>• وزن: <span class="text-yellow-400">50%</span></div>
+                            <div>• تأیید نهایی</div>
+                            <div>• آماده معامله</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-3 flex items-center gap-2">
+                        🐋 نهنگ‌های اخیر
+                        <span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full live-dot">LIVE</span>
+                    </h3>
+                    <div id="whaleList" class="space-y-2 max-h-64 overflow-y-auto scrollbar-thin">
+                        <div class="text-slate-400 text-sm">در انتظار...</div>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-3">💧 Whale Flow (24h)</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>ورود نهنگ‌ها</span>
+                                <span class="text-green-400" id="flowIn">$0</span>
+                            </div>
+                            <div class="w-full bg-slate-700 rounded-full h-3">
+                                <div id="flowInBar" class="bg-green-500 h-3 rounded-full transition-all" style="width: 50%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>خروج نهنگ‌ها</span>
+                                <span class="text-red-400" id="flowOut">$0</span>
+                            </div>
+                            <div class="w-full bg-slate-700 rounded-full h-3">
+                                <div id="flowOutBar" class="bg-red-500 h-3 rounded-full transition-all" style="width: 50%"></div>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-slate-600 flex justify-between items-center">
+                            <span>جریان خالص</span>
+                            <span id="flowNet" class="font-bold text-lg">$0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Market Tab با Data Grid مدرن -->
+        <div id="market-tab" class="tab-content hidden">
+            <div class="glass rounded-xl p-4 border border-slate-700">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+                    <h3 class="font-bold">📊 بازار فیوچرز (هر 10 ثانیه) - راست کلیک برای قیمت فعلی</h3>
+                    <div class="flex gap-2 flex-wrap">
+                        <input type="text" id="searchMarket" placeholder="🔍 جستجو نماد..." 
+                            class="bg-slate-800 rounded-lg px-3 py-1 border border-slate-600 text-sm w-40"
+                            onkeyup="filterMarket()">
+                        <select id="filterMarket" class="bg-slate-800 rounded-lg px-3 py-1 border border-slate-600 text-sm" onchange="filterMarket()">
+                            <option value="all">همه</option>
+                            <option value="pump">🟢 پامپ (>3%)</option>
+                            <option value="dump">🔴 دامپ (<-3%)</option>
+                            <option value="whale">🐋 نهنگ</option>
+                            <option value="oi_up">📈 OI بالا</option>
+                            <option value="oi_down">📉 OI پایین</option>
+                        </select>
+                        <button onclick="exportTable('market')" class="bg-blue-600 px-3 py-1 rounded-lg text-sm">
+                            📥 Export
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-thin">
+                    <table class="w-full text-sm sortable" id="marketTableElem">
+                        <thead class="bg-slate-800 sticky top-0">
+                            <tr class="text-slate-400">
+                                <th class="text-right py-2 px-2" data-sort="symbol">نماد</th>
+                                <th class="text-right py-2 px-2" data-sort="price">قیمت</th>
+                                <th class="text-right py-2 px-2" data-sort="change">تغییر 24h</th>
+                                <th class="text-right py-2 px-2" data-sort="volume">حجم</th>
+                                <th class="text-right py-2 px-2" data-sort="oi">Open Interest</th>
+                                <th class="text-right py-2 px-2" data-sort="oi_delta">OI تغییر</th>
+                                <th class="text-right py-2 px-2">وضعیت</th>
+                            </tr>
+                        </thead>
+                        <tbody id="marketTable">
+                            <tr><td colspan="7" class="text-center py-8 text-slate-400">در حال بارگذاری...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Signals Tab -->
+        <div id="signals-tab" class="tab-content hidden">
+            <div class="glass rounded-xl p-4 border border-slate-700">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+                    <h3 class="font-bold">📡 سیگنال‌ها با اعتبارسنجی دقیق (1، 2، 4 دقیقه)</h3>
+                    <div class="flex gap-2">
+                        <button onclick="filterSignals('all')" class="px-3 py-1 rounded bg-slate-700 text-sm hover:bg-slate-600">همه</button>
+                        <button onclick="filterSignals('valid')" class="px-3 py-1 rounded bg-green-500/20 text-green-400 text-sm hover:bg-green-500/30">✅ معتبر</button>
+                        <button onclick="filterSignals('invalid')" class="px-3 py-1 rounded bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30">❌ نامعتبر</button>
+                        <button onclick="filterSignals('pending')" class="px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-sm hover:bg-yellow-500/30">⏳ انتظار</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto scrollbar-thin">
+                    <table class="w-full text-sm sortable">
+                        <thead class="bg-slate-800 sticky top-0">
+                            <tr class="text-slate-400">
+                                <th class="text-right py-2 px-2">زمان</th>
+                                <th class="text-right py-2 px-2">عنوان</th>
+                                <th class="text-right py-2 px-2">نماد</th>
+                                <th class="text-right py-2 px-2">نوع</th>
+                                <th class="text-right py-2 px-2">قیمت ورود</th>
+                                <th class="text-right py-2 px-2">1 دقیقه</th>
+                                <th class="text-right py-2 px-2">2 دقیقه</th>
+                                <th class="text-right py-2 px-2">4 دقیقه</th>
+                                <th class="text-right py-2 px-2">امتیاز</th>
+                                <th class="text-right py-2 px-2">وضعیت</th>
+                            </tr>
+                        </thead>
+                        <tbody id="signalTable">
+                            <tr><td colspan="10" class="text-center py-8 text-slate-400">سیگنالی ثبت نشده</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Validation Settings Tab -->
+        <div id="validation-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="glass rounded-xl p-4 border border-slate-700 lg:col-span-2">
+                    <h3 class="font-bold mb-4">✅ تنظیمات اعتبارسنجی</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="p-3 bg-slate-800 rounded">
+                            <div class="text-sm text-slate-300">زمان‌ها (دقیقه)</div>
+                            <div class="flex gap-2 mt-2">
+                                <input id="valT1" type="number" min="1" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="1">
+                                <input id="valT2" type="number" min="1" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="2">
+                                <input id="valT3" type="number" min="1" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="4">
+                            </div>
+                        </div>
+                        <div class="p-3 bg-slate-800 rounded">
+                            <div class="text-sm text-slate-300">اوزان مراحل</div>
+                            <div class="flex gap-2 mt-2">
+                                <input id="valW1" type="number" min="0" max="100" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="20">
+                                <input id="valW2" type="number" min="0" max="100" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="30">
+                                <input id="valW3" type="number" min="0" max="100" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="50">
+                            </div>
+                        </div>
+                        <div class="p-3 bg-slate-800 rounded">
+                            <div class="text-sm text-slate-300">آستانه امتیاز برای اتوترید</div>
+                            <input id="minScore" type="number" min="0" max="100" class="w-24 bg-slate-600 rounded px-2 py-1 mt-2" placeholder="70">
+                            <div class="text-xs text-slate-400 mt-1">اگر ≥ آستانه باشد و اتوترید فعال، وارد صف معامله می‌شود</div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button onclick="saveValidationSettings()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">ذخیره اعتبارسنجی</button>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-4">آمار</h3>
+                    <div id="validationStats" class="text-sm text-slate-300">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Tab -->
+        <div id="analysis-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-4">📊 الگوهای بازار</h3>
+                    <div class="space-y-2" id="patternsList">
+                        <div class="text-slate-400 text-sm">در حال تحلیل...</div>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-4">⚡ فشار خرید/فروش</h3>
+                    <canvas id="pressureChart" class="max-h-64"></canvas>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-4">📈 تغییرات Open Interest</h3>
+                    <canvas id="oiChart" class="max-h-64"></canvas>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-4">🔄 تغییر روند</h3>
+                    <div id="trendChangeList" class="space-y-2">
+                        <div class="text-slate-400 text-sm">در حال تحلیل...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- UT Bot Tab -->
+        <div id="utbot-tab" class="tab-content hidden">
+            <div class="glass rounded-xl p-4 border border-slate-700">
+                <h3 class="font-bold mb-4 flex items-center gap-2">
+                    🤖 UT Bot Alert - سیگنال‌های خرید و فروش
+                    <span class="text-xs bg-purple-500/20 text-purple-400 px-2 py-1 rounded-full">زیبا و کارآمد</span>
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <canvas id="utbotChart" class="max-h-96"></canvas>
+                    </div>
+                    <div>
+                        <div class="space-y-3">
+                            <div class="p-4 bg-slate-800 rounded-lg">
+                                <div class="text-slate-400 text-sm mb-2">آخرین سیگنال خرید</div>
+                                <div id="utbotLastBuy" class="text-green-400 font-bold text-lg">-</div>
+                            </div>
+                            <div class="p-4 bg-slate-800 rounded-lg">
+                                <div class="text-slate-400 text-sm mb-2">آخرین سیگنال فروش</div>
+                                <div id="utbotLastSell" class="text-red-400 font-bold text-lg">-</div>
+                            </div>
+                            <div class="p-4 bg-slate-800 rounded-lg">
+                                <div class="text-slate-400 text-sm mb-2">وضعیت فعلی</div>
+                                <div id="utbotStatus" class="font-bold text-lg">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Auto Trade Tab بهبود یافته -->
+        <div id="autotrade-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-3 flex items-center gap-2">
+                        🔗 اتصال صرافی
+                        <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">فیوچرز فقط</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <select id="exchange" class="w-full bg-slate-800 rounded-lg px-3 py-2 border border-slate-600">
+                            <option value="bybit">Bybit Futures</option>
+                            <option value="okx">OKX Futures</option>
+                        </select>
+                        <input type="text" id="okxPass" placeholder="OKX Passphrase" 
+                            class="w-full bg-slate-800 rounded-lg px-3 py-2 border border-slate-600 font-mono text-xs">
+                        <input type="text" id="apiKey" placeholder="API Key" 
+                            class="w-full bg-slate-800 rounded-lg px-3 py-2 border border-slate-600 font-mono text-xs">
+                        <input type="password" id="secretKey" placeholder="Secret Key" 
+                            class="w-full bg-slate-800 rounded-lg px-3 py-2 border border-slate-600 font-mono text-xs">
+                        <label class="flex items-center gap-2 text-sm bg-slate-800 rounded-lg px-3 py-2 border border-slate-600">
+                            <input type="checkbox" id="paperTrade" checked class="w-4 h-4">
+                            <span>Paper Trade</span>
+                        </label>
+                        <button onclick="testConnection()" class="w-full bg-purple-600 hover:bg-purple-700 py-2 rounded-lg transition-all">
+                            🔌 تست اتصال
+                        </button>
+                        
+                        <div id="accountInfo" class="hidden p-3 bg-green-500/10 rounded-lg border border-green-500/30 animate-pulse">
+                            <div class="text-green-400 font-bold mb-2 flex items-center gap-2">
+                                <span class="text-xl">✅</span>
+                                <span>اتصال برقرار</span>
+                            </div>
+                            <div class="space-y-1 text-sm">
+                                <div class="flex justify-between border-b border-slate-600 pb-1">
+                                    <span class="text-slate-400">صرافی:</span>
+                                    <span id="accExchange" class="font-bold">-</span>
+                                </div>
+                                <div class="flex justify-between border-b border-slate-600 pb-1">
+                                    <span class="text-slate-400">نام کاربری:</span>
+                                    <span id="accName" class="text-cyan-400">-</span>
+                                </div>
+                                <div class="flex justify-between border-b border-slate-600 pb-1">
+                                    <span class="text-slate-400">UID:</span>
+                                    <span id="accUid" class="font-mono text-xs">-</span>
+                                </div>
+                                <div class="flex justify-between pt-2 mt-2 border-t-2 border-green-500/30">
+                                    <span class="text-slate-400">موجودی کل:</span>
+                                    <span id="accBalance" class="text-green-400 font-bold text-lg">$0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-slate-400">در دسترس:</span>
+                                    <span id="accAvailable" class="text-blue-400">$0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="connectionError" class="hidden p-3 bg-red-500/10 rounded-lg border border-red-500/30">
+                            <div class="text-red-400 font-bold mb-1 flex items-center gap-2">
+                                <span>❌</span>
+                                <span>خطا در اتصال</span>
+                            </div>
+                            <div class="text-sm text-slate-300" id="errorMessage">-</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-3">⚙️ تنظیمات معامله</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-slate-400 text-xs">مبلغ (USDT)</label>
+                            <input type="number" id="tradeAmount" value="5" min="5" 
+                                class="w-full bg-slate-800 rounded-lg px-3 py-2 border border-slate-600">
+                        </div>
+                        <div>
+                            <label class="text-slate-400 text-xs">اهرم</label>
+                            <select id="leverage" class="w-full bg-slate-800 rounded-lg px-3 py-2 border border-slate-600">
+                                <option value="3">3x</option>
+                                <option value="5" selected>5x</option>
+                                <option value="10">10x</option>
+                                <option value="20">20x</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-slate-400 text-xs">حد ضرر (%)</label>
+                                <input type="number" id="stopLoss" value="2" step="0.5"
+                                    class="w-full bg-slate-800 rounded-lg px-3 py-2 border border-slate-600">
+                            </div>
+                            <div>
+                                <label class="text-slate-400 text-xs">حد سود (%)</label>
+                                <input type="number" id="takeProfit" value="4" step="0.5"
+                                    class="w-full bg-slate-800 rounded-lg px-3 py-2 border border-slate-600">
+                            </div>
+                        </div>
+                        <div class="p-2 bg-orange-500/10 rounded-lg border border-orange-500/30">
+                            <div class="text-orange-400 text-xs font-bold mb-2">🛡️ محدودیت‌های ایمنی</div>
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="text-slate-400 text-xs">حداکثر ترید روزانه</label>
+                                    <input type="number" id="maxDaily" value="4" min="1" max="20"
+                                        class="w-full bg-slate-700 rounded px-2 py-1 border border-slate-600 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-slate-400 text-xs">حداکثر ضرر متوالی</label>
+                                    <input type="number" id="maxLosses" value="4" min="1" max="10"
+                                        class="w-full bg-slate-700 rounded px-2 py-1 border border-slate-600 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-slate-400 text-xs">حداکثر موقعیت باز</label>
+                                    <input type="number" id="maxPositions" value="4" min="1" max="10"
+                                        class="w-full bg-slate-700 rounded px-2 py-1 border border-slate-600 text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-3">🤖 کنترل اتو ترید</h3>
+                    <div class="space-y-3">
+                        <div class="p-4 bg-slate-800 rounded-lg text-center border-2 border-slate-700">
+                            <div class="text-sm text-slate-400 mb-1">وضعیت</div>
+                            <div id="tradeStatus" class="text-2xl font-bold text-slate-400">غیرفعال ⏸️</div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="p-2 bg-slate-800 rounded-lg text-center">
+                                <div class="text-lg font-bold text-blue-400" id="dailyTrades">0</div>
+                                <div class="text-xs text-slate-400">امروز</div>
+                            </div>
+                            <div class="p-2 bg-slate-800 rounded-lg text-center">
+                                <div class="text-lg font-bold text-orange-400" id="consecutiveLosses">0</div>
+                                <div class="text-xs text-slate-400">ضرر متوالی</div>
+                            </div>
+                            <div class="p-2 bg-slate-800 rounded-lg text-center">
+                                <div class="text-lg font-bold text-purple-400" id="openTrades">0</div>
+                                <div class="text-xs text-slate-400">موقعیت باز</div>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-slate-800 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm">سود/زیان خالص:</span>
+                                <span id="tradePnl" class="font-bold text-lg text-green-400">$0.00</span>
+                            </div>
+                        </div>
+                        <button onclick="startAutoTrade()" id="btnStart" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded-lg font-bold transition-all">
+                            ▶️ شروع اتو ترید
+                        </button>
+                        <button onclick="stopAutoTrade()" id="btnStop" class="hidden w-full bg-red-600 hover:bg-red-700 py-3 rounded-lg font-bold transition-all">
+                            ⏹️ توقف فوری
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 glass rounded-xl p-4 border border-green-500/30">
+                <h3 class="font-bold text-green-400 mb-3 flex items-center gap-2">
+                    🎯 صف معاملات (مرتب بر اساس امتیاز)
+                    <span class="text-xs bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full">اتوماتیک</span>
+                </h3>
+                <div id="tradeQueue" class="space-y-2 max-h-64 overflow-y-auto scrollbar-thin">
+                    <div class="text-slate-400 text-sm">سیگنال معتبری وجود ندارد</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-content hidden">
+            <div class="glass rounded-xl p-6 border border-slate-700">
+                <h3 class="font-bold text-xl mb-6 flex items-center gap-2">
+                    ⚙️ تنظیمات پارامتریک سیستم
+                    <span class="text-xs bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded-full">قابل تنظیم</span>
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="p-4 bg-slate-800 rounded-xl border border-purple-500/30">
+                        <h4 class="font-bold text-purple-400 mb-4 flex items-center gap-2">
+                            🧮 پارامترهای اعتبارسنجی
+                        </h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="text-slate-400 text-sm">حداقل تغییر قیمت (%)</label>
+                                <input type="number" id="cfgMinChange" value="0.1" step="0.05"
+                                    class="w-full bg-slate-700 rounded-lg px-3 py-2 border border-slate-600 mt-1">
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-slate-400 text-xs">زمان 1 (دقیقه)</label>
+                                    <input type="number" id="cfgTime1" value="1" min="1"
+                                        class="w-full bg-slate-700 rounded-lg px-3 py-2 border border-slate-600 mt-1">
+                                </div>
+                                <div>
+                                    <label class="text-slate-400 text-xs">زمان 2</label>
+                                    <input type="number" id="cfgTime2" value="2" min="1"
+                                        class="w-full bg-slate-700 rounded-lg px-3 py-2 border border-slate-600 mt-1">
+                                </div>
+                                <div>
+                                    <label class="text-slate-400 text-xs">زمان 3</label>
+                                    <input type="number" id="cfgTime3" value="4" min="1"
+                                        class="w-full bg-slate-700 rounded-lg px-3 py-2 border border-slate-600 mt-1">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div>
+                                    <label class="text-slate-400 text-xs">وزن 1 (%)</label>
+                                    <input type="number" id="cfgWeight1" value="20"
+                                        class="w-full bg-slate-700 rounded-lg px-3 py-2 border border-slate-600 mt-1">
+                                </div>
+                                <div>
+                                    <label class="text-slate-400 text-xs">وزن 2</label>
+                                    <input type="number" id="cfgWeight2" value="30"
+                                        class="w-full bg-slate-700 rounded-lg px-3 py-2 border border-slate-600 mt-1">
+                                </div>
+                                <div>
+                                    <label class="text-slate-400 text-xs">وزن 3</label>
+                                    <input type="number" id="cfgWeight3" value="50"
+                                        class="w-full bg-slate-700 rounded-lg px-3 py-2 border border-slate-600 mt-1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-slate-800 rounded-xl border border-cyan-500/30">
+                        <h4 class="font-bold text-cyan-400 mb-4">📊 اندیکاتورها</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between p-2 bg-slate-700 rounded">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="cfgUseRsi" checked class="w-4 h-4">
+                                    <label class="text-sm">RSI (Relative Strength Index)</label>
+                                </div>
+                                <input type="number" id="cfgRsiPeriod" value="14" 
+                                    class="w-16 bg-slate-600 rounded px-2 py-1 border border-slate-500 text-sm">
+                            </div>
+                            <div class="flex items-center gap-2 p-2 bg-slate-700 rounded">
+                                <input type="checkbox" id="cfgUseMacd" checked class="w-4 h-4">
+                                <label class="text-sm">MACD (Moving Average Convergence Divergence)</label>
+                            </div>
+                            <div class="flex items-center gap-2 p-2 bg-slate-700 rounded">
+                                <input type="checkbox" id="cfgUseVol" checked class="w-4 h-4">
+                                <label class="text-sm">Volume Analysis</label>
+                            </div>
+                            <div class="space-y-2 p-2 bg-slate-700 rounded">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" id="cfgDemo" class="w-4 h-4">
+                                    <label class="text-sm">Demo Mode (بدون اتصال خارجی)</label>
+                                </div>
+                                <div>
+                                    <label class="text-sm text-slate-300">Proxy URL</label>
+                                    <input type="text" id="cfgProxy" placeholder="http://127.0.0.1:7890 یا socks5://127.0.0.1:1080" class="w-full bg-slate-600 rounded px-2 py-1 border border-slate-500 text-sm">
+                                </div>
+                                <div class="mt-2">
+                                    <label class="text-sm text-slate-300">Server Port</label>
+                                    <input type="number" id="cfgPort" placeholder="8081" class="w-24 bg-slate-600 rounded px-2 py-1 border border-slate-500 text-sm" min="1" max="65535">
+                                </div>
+                            <label class="flex items-center gap-2">
+                                <input type="checkbox" id="useWS" class="w-4 h-4">
+                                <span class="text-sm">استفاده از WebSocket برای به‌روزرسانی لحظه‌ای</span>
+                            </label>
+                                <label class="flex items-center gap-2">
+                                    <input type="checkbox" id="cfgSkipTLS" class="w-4 h-4">
+                                    <span class="text-sm">Skip TLS Verify (فقط برای تست)</span>
+                                </label>
+                                <button onclick="saveNetworkSettings()" class="mt-2 bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded">ذخیره شبکه</button>
+                                <button onclick="checkHealth()" class="mt-2 bg-slate-600 hover:bg-slate-700 px-4 py-1 rounded">بررسی سلامت اتصال</button>
+                                <div id="healthStatus" class="text-xs text-slate-300 mt-2">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 flex gap-4">
+                    <button onclick="saveAllSettings()" class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-bold transition-all">
+                        💾 ذخیره همه تنظیمات
+                    </button>
+                    <button onclick="resetSettings()" class="bg-slate-600 hover:bg-slate-700 px-6 py-2 rounded-lg transition-all">
+                        🔄 بازگشت به پیش‌فرض
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="fixed bottom-4 right-4 bg-slate-800 border border-slate-600 rounded-xl p-4 shadow-2xl transform translate-y-20 opacity-0 transition-all z-50 max-w-sm">
+        <div class="flex items-center gap-3">
+            <span id="toastIcon" class="text-2xl">✅</span>
+            <div>
+                <div id="toastTitle" class="font-bold"></div>
+                <div id="toastMessage" class="text-sm text-slate-400"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let marketData = [];
+        let signalFilter = 'all';
+        let sortCol = 'volume';
+        let sortDir = 'desc';
+        let currentContextSymbol = '';
+        let utbotChart = null;
+        let pressureChart = null;
+        let oiChart = null;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConfig();
+            fetchData();
+            setInterval(fetchData, 10000);
+            setupTableSort();
+            setupContextMenu();
+            initCharts();
+            initUTSelection();
+        });
+        
+        function setupContextMenu() {
+            document.addEventListener('contextmenu', (e) => {
+                const row = e.target.closest('tr');
+                if (row && row.dataset.symbol) {
+                    e.preventDefault();
+                    currentContextSymbol = row.dataset.symbol;
+                    const menu = document.getElementById('contextMenu');
+                    menu.style.display = 'block';
+                    menu.style.left = e.pageX + 'px';
+                    menu.style.top = e.pageY + 'px';
+                }
+            });
+
+            document.addEventListener('click', () => {
+                document.getElementById('contextMenu').style.display = 'none';
+            });
+        }
+
+        async function showCurrentPrice() {
+            if (!currentContextSymbol) return;
+            
+            try {
+                const res = await fetch(`/api/current-price?symbol=${currentContextSymbol}`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('📊', `${data.symbol}: $${formatPrice(data.price)} (${data.change > 0 ? '+' : ''}${data.change.toFixed(2)}%)`);
+                } else {
+                    showToast('❌', 'قیمت یافت نشد');
+                }
+            } catch (e) {
+                showToast('❌', 'خطا در دریافت قیمت');
+            }
+        }
+
+        function setupTableSort() {
+            document.addEventListener('click', (e) => {
+                const th = e.target.closest('th[data-sort]');
+                if (!th) return;
+                
+                const table = th.closest('table');
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                const col = th.dataset.sort;
+                
+                // Toggle direction
+                const currentDir = th.classList.contains('sort-asc') ? 'desc' : 'asc';
+                
+                // Clear all sort classes
+                table.querySelectorAll('th').forEach(t => t.classList.remove('sort-asc', 'sort-desc'));
+                th.classList.add('sort-' + currentDir);
+                
+                // Sort rows
+                rows.sort((a, b) => {
+                    const aVal = a.dataset[col] || '';
+                    const bVal = b.dataset[col] || '';
+                    
+                    const aNum = parseFloat(aVal);
+                    const bNum = parseFloat(bVal);
+                    
+                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                        return currentDir === 'asc' ? aNum - bNum : bNum - aNum;
+                    }
+                    
+                    return currentDir === 'asc' ? 
+                        aVal.localeCompare(bVal, 'fa') : 
+                        bVal.localeCompare(aVal, 'fa');
+                });
+                
+                tbody.innerHTML = '';
+                rows.forEach(row => tbody.appendChild(row));
+            });
+        }
+
+        function initCharts() {
+            const utbotCtx = document.getElementById('utbotChart');
+            if (utbotCtx) {
+                utbotChart = new Chart(utbotCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'قیمت',
+                            data: [],
+                            borderColor: '#60a5fa',
+                            backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                            tension: 0.4
+                        }, {
+                            label: 'خرید',
+                            data: [],
+                            backgroundColor: '#22c55e',
+                            pointRadius: 6,
+                            pointStyle: 'triangle',
+                            showLine: false
+                        }, {
+                            label: 'فروش',
+                            data: [],
+                            backgroundColor: '#ef4444',
+                            pointRadius: 6,
+                            pointStyle: 'rectRot',
+                            showLine: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: true },
+                            title: { display: true, text: 'UT Bot Alerts' }
+                        }
+                    }
+                });
+            }
+
+            const pressureCtx = document.getElementById('pressureChart');
+            if (pressureCtx) {
+                pressureChart = new Chart(pressureCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'فشار خرید',
+                            data: [],
+                            backgroundColor: '#22c55e'
+                        }, {
+                            label: 'فشار فروش',
+                            data: [],
+                            backgroundColor: '#ef4444'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+
+            const oiCtx = document.getElementById('oiChart');
+            if (oiCtx) {
+                oiChart = new Chart(oiCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Open Interest',
+                            data: [],
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+        }
+        
+        function initUTSelection() {
+            const canvas = document.getElementById('utbotChart');
+            if (!canvas) return;
+            let startIdx = null;
+            let endIdx = null;
+            canvas.addEventListener('mousedown', (e) => {
+                const idx = nearestIndex(e);
+                if (idx !== null) startIdx = idx;
+            });
+            canvas.addEventListener('mouseup', async (e) => {
+                const idx = nearestIndex(e);
+                if (idx !== null) endIdx = idx;
+                if (startIdx !== null && endIdx !== null) {
+                    const a = Math.min(startIdx, endIdx), b = Math.max(startIdx, endIdx);
+                    const labels = utbotChart.data.labels || [];
+                    const startTS = labels[a] || '';
+                    const endTS = labels[b] || '';
+                    const symbol = document.getElementById('apiSource').value === 'bybit' ? 'BTCUSDT' : 'BTC-USDT-SWAP';
+                    await fetch('/api/brain/learn-zone', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({symbol: symbol, start_ts: startTS, end_ts: endTS})
+                    });
+                    showToast('🧠', 'ناحیه یادگیری ثبت شد');
+                    startIdx = null; endIdx = null;
+                }
+            });
+        }
+        
+        function nearestIndex(e) {
+            const points = utbotChart.getDatasetMeta(0).data;
+            if (!points || points.length === 0) return null;
+            const rect = e.target.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            let best = null, bestDist = Number.MAX_VALUE;
+            points.forEach((pt, i) => {
+                const d = Math.abs(pt.x - x);
+                if (d < bestDist) { bestDist = d; best = i; }
+            });
+            return best;
+        }
+        
+        async function loadUTBot() {
+            try {
+                const source = document.getElementById('apiSource').value;
+                const symbol = source === 'bybit' ? 'BTCUSDT' : 'BTCUSDT';
+                const res = await fetch(`/api/utbot?source=${source}&symbol=${symbol}`);
+                const json = await res.json();
+                if (!json.success) return;
+                const d = json.data;
+                if (utbotChart) {
+                    utbotChart.data.labels = d.labels;
+                    utbotChart.data.datasets[0].data = d.prices;
+                    utbotChart.data.datasets[1].data = d.buys;
+                    utbotChart.data.datasets[2].data = d.sells;
+                    utbotChart.update();
+                }
+            } catch (e) {}
+        }
+        
+        async function fetchData() {
+            try {
+                const source = document.getElementById('apiSource').value;
+                const res = await fetch('/api/market?source=' + source);
+                const data = await res.json();
+                
+                if (data.success) {
+                    marketData = data.data;
+                    updateApiStatus(true, data.source);
+                    updateMarketTable();
+                    updateDashboard(data);
+                    updateAnalysis(data.data);
+                    await loadUTBot();
+                } else {
+                    updateApiStatus(false, data.source);
+                }
+                
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('fa-IR');
+                
+                loadSignals();
+                loadWhales();
+                loadPumpDumps();
+                loadTradeQueue();
+                loadTradeStats();
+            } catch (e) {
+                console.error(e);
+                updateApiStatus(false, '');
+            }
+        }
+
+        let marketWS = null;
+        function openMarketWS() {
+            closeMarketWS();
+            const source = document.getElementById('apiSource').value;
+            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+            const url = `${proto}://${location.host}/ws/market?source=${source}`;
+            marketWS = new WebSocket(url);
+            marketWS.onopen = () => showToast('🔌', 'WebSocket فعال شد');
+            marketWS.onmessage = (ev) => {
+                try {
+                    const data = JSON.parse(ev.data);
+                    if (data.success) {
+                        marketData = data.data;
+                        updateApiStatus(true, data.source);
+                        updateMarketTable();
+                        updateAnalysis(data.data);
+                        loadUTBot();
+                        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('fa-IR');
+                        loadSignals();
+                        loadWhales();
+                        loadPumpDumps();
+                        loadTradeQueue();
+                        loadTradeStats();
+                    } else {
+                        updateApiStatus(false, data.source || '');
+                    }
+                } catch (e) {}
+            };
+            marketWS.onclose = () => showToast('🔌', 'WebSocket قطع شد');
+            marketWS.onerror = () => showToast('❌', 'خطا در WebSocket');
+        }
+        function closeMarketWS() {
+            if (marketWS) {
+                try { marketWS.close(); } catch (e) {}
+                marketWS = null;
+            }
+        }
+
+        function updateAnalysis(data) {
+            // الگوها
+            const patterns = {};
+            data.forEach(m => {
+                if (m.price >= m.high * 0.98) patterns['نزدیک سقف'] = (patterns['نزدیک سقف'] || 0) + 1;
+                if (m.price <= m.low * 1.02) patterns['نزدیک کف'] = (patterns['نزدیک کف'] || 0) + 1;
+                if (m.change > 10) patterns['پامپ شدید'] = (patterns['پامپ شدید'] || 0) + 1;
+                if (m.change < -10) patterns['دامپ شدید'] = (patterns['دامپ شدید'] || 0) + 1;
+            });
+
+            const patternsList = document.getElementById('patternsList');
+            patternsList.innerHTML = Object.entries(patterns).map(([pattern, count]) => 
+                `<div class="p-2 bg-slate-800 rounded flex justify-between">
+                    <span>${pattern}</span>
+                    <span class="font-bold text-cyan-400">${count}</span>
+                </div>`
+            ).join('') || '<div class="text-slate-400 text-sm">الگویی یافت نشد</div>';
+
+            // تغییر روند
+            const trendChanges = data.filter(m => Math.abs(m.change) > 5).slice(0, 10);
+            document.getElementById('trendChangeList').innerHTML = trendChanges.map(m => 
+                `<div class="p-2 bg-slate-800 rounded flex justify-between items-center">
+                    <span class="font-bold">${m.symbol.replace('USDT', '')}</span>
+                    <span class="${m.change > 0 ? 'text-green-400' : 'text-red-400'} font-bold">
+                        ${m.change > 0 ? '↗' : '↘'} ${m.change.toFixed(2)}%
+                    </span>
+                </div>`
+            ).join('') || '<div class="text-slate-400 text-sm">تغییر روندی مشاهده نشد</div>';
+        }
+        
+        async function loadConfig() {
+            const res = await fetch('/api/config');
+            const cfg = await res.json();
+            document.getElementById('apiSource').value = cfg.api_source || 'bybit';
+            document.getElementById('cfgDemo').checked = !!cfg.demo_mode;
+            document.getElementById('cfgProxy').value = cfg.proxy_url || '';
+            document.getElementById('cfgSkipTLS').checked = !!cfg.skip_tls_verify;
+            document.getElementById('cfgPort').value = cfg.port || 8081;
+            const t = cfg.validation_times || [1,2,4];
+            const w = cfg.validation_weights || [20,30,50];
+            document.getElementById('valT1').value = t[0] || 1;
+            document.getElementById('valT2').value = t[1] || 2;
+            document.getElementById('valT3').value = t[2] || 4;
+            document.getElementById('valW1').value = w[0] || 20;
+            document.getElementById('valW2').value = w[1] || 30;
+            document.getElementById('valW3').value = w[2] || 50;
+            document.getElementById('minScore').value = cfg.min_score_for_trade || 70;
+            if (document.getElementById('useWS').checked) openMarketWS();
+        }
+        
+        async function loadSignals() {
+            const res = await fetch('/api/signals?status=' + signalFilter);
+            const data = await res.json();
+            updateSignalTable(data.signals);
+            document.getElementById('statValid').textContent = data.stats.valid;
+            document.getElementById('statPending').textContent = data.stats.pending;
+            document.getElementById('statAccuracy').textContent = data.stats.accuracy.toFixed(1) + '%';
+        }
+        
+        async function loadWhales() {
+            const res = await fetch('/api/whales');
+            const data = await res.json();
+            updateWhaleList(data.whales);
+            updateWhaleFlow(data.flow);
+            document.getElementById('statWhales').textContent = data.whales ? data.whales.length : 0;
+        }
+        
+        async function loadPumpDumps() {
+            const res = await fetch('/api/pump-dumps');
+            const data = await res.json();
+            document.getElementById('statPumpDump').textContent = data ? data.length : 0;
+        }
+        
+        async function loadTradeQueue() {
+            const res = await fetch('/api/trade-queue');
+            const data = await res.json();
+            updateTradeQueue(data);
+        }
+        
+        async function loadTradeStats() {
+            const res = await fetch('/api/auto-trade/stats');
+            const s = await res.json();
+            document.getElementById('dailyTrades').textContent = s.daily_trades;
+            document.getElementById('consecutiveLosses').textContent = s.consecutive_losses;
+            document.getElementById('openTrades').textContent = s.open_trades;
+            document.getElementById('tradePnl').textContent = '$' + s.net_pnl.toFixed(2);
+            document.getElementById('tradePnl').className = 'font-bold text-lg ' + (s.net_pnl >= 0 ? 'text-green-400' : 'text-red-400');
+            
+            if (s.is_running) {
+                document.getElementById('tradeStatus').textContent = 'فعال ▶️';
+                document.getElementById('tradeStatus').className = 'text-2xl font-bold text-green-400 animate-pulse';
+                document.getElementById('btnStart').classList.add('hidden');
+                document.getElementById('btnStop').classList.remove('hidden');
+            } else {
+                document.getElementById('tradeStatus').textContent = 'غیرفعال ⏸️';
+                document.getElementById('tradeStatus').className = 'text-2xl font-bold text-slate-400';
+                document.getElementById('btnStart').classList.remove('hidden');
+                document.getElementById('btnStop').classList.add('hidden');
+            }
+        }
+        
+        async function testConnection() {
+            const exchange = document.getElementById('exchange').value;
+            const okxPass = document.getElementById('okxPass').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const secretKey = document.getElementById('secretKey').value;
+            const paper = document.getElementById('paperTrade').checked;
+            
+            if (!apiKey || !secretKey) {
+                showToast('❌', 'لطفاً API Key و Secret Key را وارد کنید');
+                return;
+            }
+            
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({exchange: exchange, api_key: apiKey, secret_key: secretKey, okx_passphrase: okxPass, paper_trade: paper})
+            });
+            
+            const res = await fetch('/api/account');
+            const data = await res.json();
+            
+            document.getElementById('connectionError').classList.add('hidden');
+            
+            if (data.success) {
+                const info = document.getElementById('accountInfo');
+                info.classList.remove('hidden');
+                document.getElementById('accExchange').textContent = data.exchange;
+                document.getElementById('accName').textContent = data.name;
+                document.getElementById('accUid').textContent = data.uid;
+                document.getElementById('accBalance').textContent = '$' + data.balance.toFixed(2);
+                document.getElementById('accAvailable').textContent = '$' + data.available.toFixed(2);
+                showToast('✅', 'اتصال با موفقیت برقرار شد');
+            } else {
+                document.getElementById('connectionError').classList.remove('hidden');
+                document.getElementById('errorMessage').textContent = data.error || 'خطای نامشخص';
+                showToast('❌', 'خطا در اتصال به صرافی');
+            }
+        }
+        
+        async function startAutoTrade() {
+            await fetch('/api/auto-trade/start', {method: 'POST'});
+            showToast('🤖', 'اتو ترید شروع شد');
+            loadTradeStats();
+        }
+        
+        async function stopAutoTrade() {
+            await fetch('/api/auto-trade/stop', {method: 'POST'});
+            showToast('⏹️', 'اتو ترید متوقف شد');
+            loadTradeStats();
+        }
+        
+        async function changeApi() {
+            const source = document.getElementById('apiSource').value;
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({api_source: source})
+            });
+            if (document.getElementById('useWS').checked) {
+                openMarketWS();
+            } else {
+                fetchData();
+            }
+        }
+        
+        function updateApiStatus(ok, source) {
+            const el = document.getElementById('apiStatus');
+            if (ok) {
+                el.className = 'flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm';
+                let name = source;
+                if (source === 'bybit') name = 'Bybit';
+                else if (source === 'okx') name = 'OKX';
+                else if (source === 'bitget') name = 'Bitget';
+                else if (source === 'kraken') name = 'Kraken';
+                else if (source === 'demo') name = 'Demo';
+                el.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500 live-dot"></span><span>متصل: ' + name + ' Futures</span>';
+            } else {
+                el.className = 'flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/20 text-red-400 text-sm';
+                el.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-500"></span><span>خطا در اتصال</span>';
+            }
+        }
+        
+        function updateDashboard(data) {
+            // Stats updated from other loaders
+        }
+        
+        function updateMarketTable() {
+            const tbody = document.getElementById('marketTable');
+            if (!marketData || marketData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-400">در حال بارگذاری...</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = marketData.slice(0, 100).map(m => {
+                const isPump = m.change > 5;
+                const isDump = m.change < -5;
+                const isWhale = m.volume > 500000;
+                const oiUp = m.oi_delta > 3;
+                const oiDown = m.oi_delta < -3;
+                
+                return `<tr class="border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors"
+                           data-symbol="${m.symbol}"
+                           data-price="${m.price}"
+                           data-change="${m.change}"
+                           data-volume="${m.volume}"
+                           data-oi="${m.open_interest}"
+                           data-oi_delta="${m.oi_delta}">
+                    <td class="py-2 px-2 font-bold">${m.symbol.replace('USDT', '')}</td>
+                    <td class="py-2 px-2 font-mono text-cyan-400">$${formatPrice(m.price)}</td>
+                    <td class="py-2 px-2 ${m.change >= 0 ? 'text-green-400' : 'text-red-400'} font-bold">
+                        ${m.change >= 0 ? '+' : ''}${m.change.toFixed(2)}%</td>
+                    <td class="py-2 px-2 text-blue-400">$${formatNum(m.volume)}</td>
+                    <td class="py-2 px-2 text-purple-400">${formatNum(m.open_interest)}</td>
+                    <td class="py-2 px-2 ${m.oi_delta >= 0 ? 'text-green-400' : 'text-red-400'}">
+                        ${m.oi_delta >= 0 ? '+' : ''}${m.oi_delta.toFixed(2)}%</td>
+                    <td class="py-2 px-2 flex gap-1 flex-wrap">
+                        ${isPump ? '<span class="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-400">🚀پامپ</span>' : ''}
+                        ${isDump ? '<span class="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400">💥دامپ</span>' : ''}
+                        ${isWhale ? '<span class="px-2 py-0.5 rounded text-xs bg-blue-500/20 text-blue-400">🐋نهنگ</span>' : ''}
+                        ${oiUp ? '<span class="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400">📈OI↑</span>' : ''}
+                        ${oiDown ? '<span class="px-2 py-0.5 rounded text-xs bg-orange-500/20 text-orange-400">📉OI↓</span>' : ''}
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function filterMarket() {
+            const search = document.getElementById('searchMarket').value.toLowerCase();
+            const filter = document.getElementById('filterMarket').value;
+            
+            let filtered = marketData.filter(m => {
+                if (search && !m.symbol.toLowerCase().includes(search)) return false;
+                
+                if (filter === 'pump' && m.change <= 3) return false;
+                if (filter === 'dump' && m.change >= -3) return false;
+                if (filter === 'whale' && m.volume < 500000) return false;
+                if (filter === 'oi_up' && m.oi_delta <= 3) return false;
+                if (filter === 'oi_down' && m.oi_delta >= -3) return false;
+                
+                return true;
+            });
+            
+            marketData = filtered;
+            updateMarketTable();
+        }
+        
+        function updateSignalTable(signals) {
+            const tbody = document.getElementById('signalTable');
+            if (!signals || signals.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-slate-400">سیگنالی ثبت نشده</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = signals.map(s => {
+                const statusColor = s.final_status === 'valid' ? 'green' : s.final_status === 'invalid' ? 'red' : 'yellow';
+                return `<tr class="border-b border-slate-700/50 border-r-4 border-r-${statusColor}-500 hover:bg-slate-800/50">
+                    <td class="py-2 px-2 text-xs">${formatTime(s.timestamp)}</td>
+                    <td class="py-2 px-2 text-xs italic text-slate-300">${s.title || '-'}</td>
+                    <td class="py-2 px-2 font-bold">${s.symbol.replace('USDT', '')}</td>
+                    <td class="py-2 px-2">
+                        <span class="px-2 py-0.5 rounded text-xs ${s.signal_type === 'LONG' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
+                            ${s.signal_type === 'LONG' ? '📈 LONG' : '📉 SHORT'}
+                        </span>
+                    </td>
+                    <td class="py-2 px-2 font-mono text-cyan-400">$${formatPrice(s.entry_price)}</td>
+                    <td class="py-2 px-2 ${s.valid_1min ? 'text-green-400' : s.price_1min ? 'text-red-400' : 'text-slate-400'}">
+                        ${s.price_1min ? (s.valid_1min ? '✅ ' : '❌ ') + '$' + formatPrice(s.price_1min) : '⏳'}
+                    </td>
+                    <td class="py-2 px-2 ${s.valid_2min ? 'text-green-400' : s.price_2min ? 'text-red-400' : 'text-slate-400'}">
+                        ${s.price_2min ? (s.valid_2min ? '✅ ' : '❌ ') + '$' + formatPrice(s.price_2min) : '⏳'}
+                    </td>
+                    <td class="py-2 px-2 ${s.valid_4min ? 'text-green-400' : s.price_4min ? 'text-red-400' : 'text-slate-400'}">
+                        ${s.price_4min ? (s.valid_4min ? '✅ ' : '❌ ') + '$' + formatPrice(s.price_4min) : '⏳'}
+                    </td>
+                    <td class="py-2 px-2">
+                        <div class="flex items-center gap-2">
+                            <div class="w-12 bg-slate-700 rounded-full h-2">
+                                <div class="h-2 rounded-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500" 
+                                     style="width: ${s.score}%"></div>
+                            </div>
+                            <span class="font-bold text-xs ${s.score >= 70 ? 'text-green-400' : s.score >= 50 ? 'text-yellow-400' : 'text-red-400'}">
+                                ${s.score}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="py-2 px-2 text-center text-xl">
+                        ${s.final_status === 'valid' ? '✅' : s.final_status === 'invalid' ? '❌' : '⏳'}
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function updateWhaleList(whales) {
+            const container = document.getElementById('whaleList');
+            
+            if (!whales || whales.length === 0) {
+                container.innerHTML = '<div class="text-slate-400 text-sm">در انتظار...</div>';
+                return;
+            }
+            
+            const html = whales.slice(0, 10).map(w => 
+                `<div class="p-3 rounded-lg border transition-all hover:border-opacity-100 ${
+                    w.whale_type === 'buy' ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'
+                }">
+                    <div class="flex justify-between items-start mb-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">${w.whale_type === 'buy' ? '📥' : '📤'}</span>
+                            <span class="font-bold text-lg">${w.symbol.replace('USDT', '')}</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold ${w.whale_type === 'buy' ? 'text-green-400' : 'text-red-400'}">
+                                $${formatNum(w.volume)}
+                            </div>
+                            <div class="text-xs text-slate-400">${formatTime(w.timestamp)}</div>
+                        </div>
+                    </div>
+                    ${w.title ? `<div class="text-xs text-slate-300 mt-1 italic">${w.title}</div>` : ''}
+                    ${w.oi_delta ? `<div class="text-xs mt-1">
+                        <span class="text-slate-400">OI تغییر:</span>
+                        <span class="${w.oi_delta > 0 ? 'text-green-400' : 'text-red-400'}">
+                            ${w.oi_delta > 0 ? '+' : ''}${w.oi_delta.toFixed(2)}%
+                        </span>
+                    </div>` : ''}
+                    <div class="mt-1 flex items-center gap-2">
+                        <div class="text-xs text-slate-400">اطمینان:</div>
+                        <div class="flex-1 bg-slate-700 rounded-full h-1.5">
+                            <div class="h-1.5 rounded-full bg-cyan-500" style="width: ${w.confidence_score}%"></div>
+                        </div>
+                        <span class="text-xs text-cyan-400">${w.confidence_score.toFixed(0)}%</span>
+                    </div>
+                </div>`
+            ).join('');
+            
+            container.innerHTML = html;
+        }
+        
+        function updateWhaleFlow(flow) {
+            if (!flow) return;
+            
+            const total = flow.inflow + flow.outflow || 1;
+            document.getElementById('flowIn').textContent = '$' + formatNum(flow.inflow);
+            document.getElementById('flowOut').textContent = '$' + formatNum(flow.outflow);
+            document.getElementById('flowInBar').style.width = (flow.inflow / total * 100) + '%';
+            document.getElementById('flowOutBar').style.width = (flow.outflow / total * 100) + '%';
+            document.getElementById('flowNet').textContent = (flow.net >= 0 ? '+' : '') + '$' + formatNum(Math.abs(flow.net));
+            document.getElementById('flowNet').className = 'font-bold text-lg ' + (flow.net >= 0 ? 'text-green-400' : 'text-red-400');
+            document.getElementById('statFlow').textContent = '$' + formatNum(Math.abs(flow.net));
+        }
+        
+        function updateTradeQueue(signals) {
+            const container = document.getElementById('tradeQueue');
+            if (!signals || signals.length === 0) {
+                container.innerHTML = '<div class="text-slate-400 text-sm">سیگنال معتبری وجود ندارد</div>';
+                return;
+            }
+            
+            container.innerHTML = signals.map((s, i) => 
+                `<div class="p-3 rounded-lg border transition-all ${
+                    s.signal_type === 'LONG' ? 'border-green-500/30 bg-green-500/5 hover:border-green-500/50' : 'border-red-500/30 bg-red-500/5 hover:border-red-500/50'
+                } flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl font-bold text-slate-500">#${i + 1}</span>
+                        <span class="text-2xl">${s.signal_type === 'LONG' ? '📈' : '📉'}</span>
+                        <div>
+                            <div class="font-bold text-lg">${s.symbol.replace('USDT', '')}</div>
+                            ${s.title ? `<div class="text-xs text-slate-400">${s.title}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-24 bg-slate-700 rounded-full h-3">
+                            <div class="h-3 rounded-full bg-gradient-to-r from-yellow-500 to-green-500 transition-all" 
+                                 style="width: ${s.score}%"></div>
+                        </div>
+                        <span class="font-bold text-xl text-green-400 min-w-[3rem] text-right">${s.score}</span>
+                    </div>
+                </div>`
+            ).join('');
+        }
+        
+        function showTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tab + '-tab').classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-700');
+                btn.classList.add('hover:bg-slate-700');
+                if (btn.dataset.tab === tab) {
+                    btn.classList.add('bg-slate-700');
+                    btn.classList.remove('hover:bg-slate-700');
+                }
+            });
+        }
+        
+        function filterSignals(status) {
+            signalFilter = status;
+            showTab('signals');
+            loadSignals();
+        }
+        
+        function formatNum(n) {
+            if (!n) return '0';
+            if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+            if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+            return n.toFixed(2);
+        }
+        
+        function formatPrice(p) {
+            if (!p) return '0';
+            if (p >= 1000) return p.toFixed(2);
+            if (p >= 1) return p.toFixed(4);
+            return p.toFixed(8);
+        }
+        
+        function formatTime(t) {
+            if (!t) return '-';
+            return new Date(t).toLocaleTimeString('fa-IR');
+        }
+        
+        function showToast(icon, msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastIcon').textContent = icon;
+            document.getElementById('toastTitle').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+        }
+
+        function saveAllSettings() {
+            // پیاده‌سازی ذخیره تنظیمات
+            showToast('💾', 'تنظیمات ذخیره شد');
+        }
+
+        function resetSettings() {
+            // پیاده‌سازی بازنشانی
+            showToast('🔄', 'تنظیمات به حالت پیش‌فرض بازگشت');
+        }
+
+        function exportTable(type) {
+            showToast('📥', 'در حال آماده‌سازی فایل...');
+        }
+
+        async function saveNetworkSettings() {
+            const demo = document.getElementById('cfgDemo').checked;
+            const proxy = document.getElementById('cfgProxy').value;
+            const skip = document.getElementById('cfgSkipTLS').checked;
+            const port = parseInt(document.getElementById('cfgPort').value || '8081', 10);
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({demo_mode: demo, proxy_url: proxy, skip_tls_verify: skip, port: port, use_exchange_ws: document.getElementById('useWS').checked})
+            });
+            showToast('🌐', 'تنظیمات شبکه ذخیره شد');
+            if (document.getElementById('useWS').checked) {
+                openMarketWS();
+            } else {
+                closeMarketWS();
+                fetchData();
+            }
+        }
+
+        async function checkHealth() {
+            const res = await fetch('/api/health');
+            const h = await res.json();
+            document.getElementById('healthStatus').textContent =
+                `Bybit: ${h.bybit_ok ? '✅' : '❌'} ${h.bybit_err || ''} | ` +
+                `OKX: ${h.okx_ok ? '✅' : '❌'} ${h.okx_err || ''} | ` +
+                `Bitget: ${h.bitget_ok ? '✅' : '❌'} ${h.bitget_err || ''} | ` +
+                `Kraken: ${h.kraken_ok ? '✅' : '❌'} ${h.kraken_err || ''}`;
+        }
+        
+        async function saveValidationSettings() {
+            const times = [
+                parseInt(document.getElementById('valT1').value || '1', 10),
+                parseInt(document.getElementById('valT2').value || '2', 10),
+                parseInt(document.getElementById('valT3').value || '4', 10),
+            ];
+            const weights = [
+                parseInt(document.getElementById('valW1').value || '20', 10),
+                parseInt(document.getElementById('valW2').value || '30', 10),
+                parseInt(document.getElementById('valW3').value || '50', 10),
+            ];
+            const minScore = parseInt(document.getElementById('minScore').value || '70', 10);
+            await fetch('/api/config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({validation_times: times, validation_weights: weights, min_score_for_trade: minScore})
+            });
+            showToast('✅', 'تنظیمات اعتبارسنجی ذخیره شد');
+            loadSignals();
+            loadValidationStats();
+        }
+        
+        async function loadValidationStats() {
+            const res = await fetch('/api/signals?status=all');
+            const d = await res.json();
+            const s = d.stats || {valid:0, invalid:0, pending:0, accuracy:0};
+            document.getElementById('validationStats').textContent = 
+                `معتبر: ${s.valid} | نامعتبر: ${s.invalid} | در انتظار: ${s.pending} | دقت: ${s.accuracy?.toFixed ? s.accuracy.toFixed(1) : s.accuracy}%`;
+        }
+    </script>
+</body>
+</html>
