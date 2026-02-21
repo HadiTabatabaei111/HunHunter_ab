@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐋 Whale Hunter Pro v6.0 - Enhanced Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <style>
+        * { font-family: 'Vazirmatn', sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); }
+        .live-dot { animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: #1e293b; }
+        .context-menu {
+            position: fixed;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 8px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
+        }
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .context-menu-item:hover {
+            background: #334155;
+        }
+        table.sortable th {
+            cursor: pointer;
+            user-select: none;
+        }
+        table.sortable th:hover {
+            background: #334155;
+        }
+        table.sortable th.sort-asc::after {
+            content: ' ▲';
+            font-size: 0.7em;
+        }
+        table.sortable th.sort-desc::after {
+            content: ' ▼';
+            font-size: 0.7em;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white min-h-screen">
+    
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu">
+        <div class="context-menu-item" onclick="showCurrentPrice()">
+            📊 نمایش قیمت فعلی
+        </div>
+    </div>
+
+    <header class="glass border-b border-slate-700 sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-4">
+                    <h1 class="text-2xl font-bold flex items-center gap-2">
+                        <span class="text-4xl">🐋</span>
+                        <span class="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                            Whale Hunter Pro v6.0
+                        </span>
+                        <span class="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">Enhanced 🚀</span>
+                    </h1>
+                    <div id="apiStatus" class="flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-sm">
+                        <span class="w-2 h-2 rounded-full bg-yellow-500 live-dot"></span>
+                        <span>در حال اتصال...</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <select id="apiSource" onchange="changeApi()" class="bg-slate-800 rounded-lg px-3 py-1 border border-slate-600 text-sm">
+                        <option value="bybit">🟡 Bybit Futures</option>
+                        <option value="okx">⭕ OKX Futures</option>
+                        <option value="bitget">🟢 Bitget Futures</option>
+                        <option value="kraken">🔵 Kraken Futures</option>
+                    </select>
+                    <span id="lastUpdate" class="text-xs text-slate-400">-</span>
+                </div>
+            </div>
+            <nav class="flex gap-2 mt-3 flex-wrap">
+                <button onclick="showTab('dashboard')" class="tab-btn px-4 py-2 rounded-lg bg-slate-700 text-sm" data-tab="dashboard">🎯 داشبورد</button>
+                <button onclick="showTab('market')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="market">📊 بازار</button>
+                <button onclick="showTab('whales')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="whales">🐋 نهنگ‌ها</button>
+                <button onclick="showTab('signals')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="signals">📡 سیگنال‌ها</button>
+                <button onclick="showTab('validation')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="validation">✅ اعتبارسنجی</button>
+                <button onclick="showTab('analysis')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="analysis">📈 تحلیل</button>
+                <button onclick="showTab('utbot')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="utbot">🤖 UT Bot</button>
+                <button onclick="showTab('autotrade')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="autotrade">⚡ اتو ترید</button>
+                <button onclick="showTab('settings')" class="tab-btn px-4 py-2 rounded-lg hover:bg-slate-700 text-sm" data-tab="settings">⚙️ تنظیمات</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        
+        <!-- Dashboard -->
+        <div id="dashboard-tab" class="tab-content">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+                <div class="glass rounded-xl p-4 border border-slate-700 cursor-pointer hover:border-blue-500 transition-all" onclick="showTab('whales')">
+                    <div class="text-slate-400 text-xs">نهنگ مادر</div>
+                    <div class="text-2xl font-bold text-blue-400" id="statWhales">0</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700 cursor-pointer hover:border-green-500 transition-all" onclick="filterSignals('valid')">
+                    <div class="text-slate-400 text-xs">سیگنال معتبر</div>
+                    <div class="text-2xl font-bold text-green-400" id="statValid">0</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700 cursor-pointer hover:border-yellow-500 transition-all" onclick="filterSignals('pending')">
+                    <div class="text-slate-400 text-xs">در انتظار</div>
+                    <div class="text-2xl font-bold text-yellow-400" id="statPending">0</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <div class="text-slate-400 text-xs">دقت سیگنال</div>
+                    <div class="text-2xl font-bold text-purple-400" id="statAccuracy">0%</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <div class="text-slate-400 text-xs">پامپ/دامپ</div>
+                    <div class="text-2xl font-bold text-orange-400" id="statPumpDump">0</div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <div class="text-slate-400 text-xs">Whale Flow</div>
+                    <div class="text-2xl font-bold text-cyan-400" id="statFlow">$0</div>
+                </div>
+            </div>
+            
+            <div class="mb-6 glass rounded-xl p-4 border border-purple-500/30">
+                <h3 class="font-bold text-purple-400 mb-3 flex items-center gap-2">
+                    🧮 فرمول اعتبارسنجی دقیق
+                    <span class="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">پویا</span>
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="p-3 bg-slate-800 rounded-lg">
+                        <div class="text-cyan-400 font-bold mb-2">⏱️ مرحله 1 (1 دقیقه)</div>
+                        <div class="text-slate-300 text-xs space-y-1">
+                            <div>• وزن: <span class="text-yellow-400">20%</span></div>
+                            <div>• حداقل تغییر: <span class="text-green-400">±0.1%</span></div>
+                            <div>• بررسی سریع روند</div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-slate-800 rounded-lg">
+                        <div class="text-cyan-400 font-bold mb-2">⏱️ مرحله 2 (2 دقیقه)</div>
+                        <div class="text-slate-300 text-xs space-y-1">
+                            <div>• وزن: <span class="text-yellow-400">30%</span></div>
+                            <div>• تأیید روند</div>
+                            <div>• بررسی استمرار</div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-slate-800 rounded-lg">
+                        <div class="text-cyan-400 font-bold mb-2">⏱️ مرحله 3 (4 دقیقه)</div>
+                        <div class="text-slate-300 text-xs space-y-1">
+                            <div>• وزن: <span class="text-yellow-400">50%</span></div>
+                            <div>• تأیید نهایی</div>
+                            <div>• آماده معامله</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-3 flex items-center gap-2">
+                        🐋 نهنگ‌های اخیر
+                        <span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full live-dot">LIVE</span>
+                    </h3>
+                    <div id="whaleList" class="space-y-2 max-h-64 overflow-y-auto scrollbar-thin">
+                        <div class="text-slate-400 text-sm">در انتظار...</div>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-3">💧 Whale Flow (24h)</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>ورود نهنگ‌ها</span>
+                                <span class="text-green-400" id="flowIn">$0</span>
+                            </div>
+                            <div class="w-full bg-slate-700 rounded-full h-3">
+                                <div id="flowInBar" class="bg-green-500 h-3 rounded-full transition-all" style="width: 50%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>خروج نهنگ‌ها</span>
+                                <span class="text-red-400" id="flowOut">$0</span>
+                            </div>
+                            <div class="w-full bg-slate-700 rounded-full h-3">
+                                <div id="flowOutBar" class="bg-red-500 h-3 rounded-full transition-all" style="width: 50%"></div>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-slate-600 flex justify-between items-center">
+                            <span>جریان خالص</span>
+                            <span id="flowNet" class="font-bold text-lg">$0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Market Tab با Data Grid مدرن -->
+        <div id="market-tab" class="tab-content hidden">
+            <div class="glass rounded-xl p-4 border border-slate-700">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+                    <h3 class="font-bold">📊 بازار فیوچرز (هر 10 ثانیه) - راست کلیک برای قیمت فعلی</h3>
+                    <div class="flex gap-2 flex-wrap">
+                        <input type="text" id="searchMarket" placeholder="🔍 جستجو نماد..." 
+                            class="bg-slate-800 rounded-lg px-3 py-1 border border-slate-600 text-sm w-40"
+                            onkeyup="filterMarket()">
+                        <select id="filterMarket" class="bg-slate-800 rounded-lg px-3 py-1 border border-slate-600 text-sm" onchange="filterMarket()">
+                            <option value="all">همه</option>
+                            <option value="pump">🟢 پامپ (>3%)</option>
+                            <option value="dump">🔴 دامپ (<-3%)</option>
+                            <option value="whale">🐋 نهنگ</option>
+                            <option value="oi_up">📈 OI بالا</option>
+                            <option value="oi_down">📉 OI پایین</option>
+                        </select>
+                        <button onclick="exportTable('market')" class="bg-blue-600 px-3 py-1 rounded-lg text-sm">
+                            📥 Export
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-thin">
+                    <table class="w-full text-sm sortable" id="marketTableElem">
+                        <thead class="bg-slate-800 sticky top-0">
+                            <tr class="text-slate-400">
+                                <th class="text-right py-2 px-2" data-sort="symbol">نماد</th>
+                                <th class="text-right py-2 px-2" data-sort="price">قیمت</th>
+                                <th class="text-right py-2 px-2" data-sort="change">تغییر 24h</th>
+                                <th class="text-right py-2 px-2" data-sort="volume">حجم</th>
+                                <th class="text-right py-2 px-2" data-sort="oi">Open Interest</th>
+                                <th class="text-right py-2 px-2" data-sort="oi_delta">OI تغییر</th>
+                                <th class="text-right py-2 px-2">وضعیت</th>
+                            </tr>
+                        </thead>
+                        <tbody id="marketTable">
+                            <tr><td colspan="7" class="text-center py-8 text-slate-400">در حال بارگذاری...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Signals Tab -->
+        <div id="signals-tab" class="tab-content hidden">
+            <div class="glass rounded-xl p-4 border border-slate-700">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+                    <h3 class="font-bold">📡 سیگنال‌ها با اعتبارسنجی دقیق (1، 2، 4 دقیقه)</h3>
+                    <div class="flex gap-2">
+                        <button onclick="filterSignals('all')" class="px-3 py-1 rounded bg-slate-700 text-sm hover:bg-slate-600">همه</button>
+                        <button onclick="filterSignals('valid')" class="px-3 py-1 rounded bg-green-500/20 text-green-400 text-sm hover:bg-green-500/30">✅ معتبر</button>
+                        <button onclick="filterSignals('invalid')" class="px-3 py-1 rounded bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30">❌ نامعتبر</button>
+                        <button onclick="filterSignals('pending')" class="px-3 py-1 rounded bg-yellow-500/20 text-yellow-400 text-sm hover:bg-yellow-500/30">⏳ انتظار</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto scrollbar-thin">
+                    <table class="w-full text-sm sortable">
+                        <thead class="bg-slate-800 sticky top-0">
+                            <tr class="text-slate-400">
+                                <th class="text-right py-2 px-2">زمان</th>
+                                <th class="text-right py-2 px-2">عنوان</th>
+                                <th class="text-right py-2 px-2">نماد</th>
+                                <th class="text-right py-2 px-2">نوع</th>
+                                <th class="text-right py-2 px-2">قیمت ورود</th>
+                                <th class="text-right py-2 px-2">1 دقیقه</th>
+                                <th class="text-right py-2 px-2">2 دقیقه</th>
+                                <th class="text-right py-2 px-2">4 دقیقه</th>
+                                <th class="text-right py-2 px-2">امتیاز</th>
+                                <th class="text-right py-2 px-2">وضعیت</th>
+                            </tr>
+                        </thead>
+                        <tbody id="signalTable">
+                            <tr><td colspan="10" class="text-center py-8 text-slate-400">سیگنالی ثبت نشده</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Validation Settings Tab -->
+        <div id="validation-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="glass rounded-xl p-4 border border-slate-700 lg:col-span-2">
+                    <h3 class="font-bold mb-4">✅ تنظیمات اعتبارسنجی</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="p-3 bg-slate-800 rounded">
+                            <div class="text-sm text-slate-300">زمان‌ها (دقیقه)</div>
+                            <div class="flex gap-2 mt-2">
+                                <input id="valT1" type="number" min="1" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="1">
+                                <input id="valT2" type="number" min="1" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="2">
+                                <input id="valT3" type="number" min="1" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="4">
+                            </div>
+                        </div>
+                        <div class="p-3 bg-slate-800 rounded">
+                            <div class="text-sm text-slate-300">اوزان مراحل</div>
+                            <div class="flex gap-2 mt-2">
+                                <input id="valW1" type="number" min="0" max="100" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="20">
+                                <input id="valW2" type="number" min="0" max="100" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="30">
+                                <input id="valW3" type="number" min="0" max="100" class="w-16 bg-slate-600 rounded px-2 py-1" placeholder="50">
+                            </div>
+                        </div>
+                        <div class="p-3 bg-slate-800 rounded">
+                            <div class="text-sm text-slate-300">آستانه امتیاز برای اتوترید</div>
+                            <input id="minScore" type="number" min="0" max="100" class="w-24 bg-slate-600 rounded px-2 py-1 mt-2" placeholder="70">
+                            <div class="text-xs text-slate-400 mt-1">اگر ≥ آستانه باشد و اتوترید فعال، وارد صف معامله می‌شود</div>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button onclick="saveValidationSettings()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">ذخیره اعتبارسنجی</button>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-4 border border-slate-700">
+                    <h3 class="font-bold mb-4">آمار</h3>
+                    <div id="validationStats" class="text-sm text-slate-300">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Tab -->
+        <div id="analysis-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div clas
